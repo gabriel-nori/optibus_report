@@ -1,0 +1,1 @@
+from app.processor.duty.processor import DutyProcessor
