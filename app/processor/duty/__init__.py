@@ -1,1 +1,1 @@
-from app.processor.duty.processor import DutyProcessor
+from app.processor.duty.processor import Processor

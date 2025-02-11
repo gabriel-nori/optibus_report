@@ -1,4 +1,4 @@
-from app.processor.duty import DutyProcessor
+from app.processor.duty import Processor
 
-dp = DutyProcessor()
-dp.start()
+processor = Processor()
+processor.start()
