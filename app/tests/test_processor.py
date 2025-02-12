@@ -44,4 +44,17 @@ class TestProcessor(TestCase):
         os.remove(f"{settings.FILE_OUTPUT_PATH}{filename}.xlsx")
 
         assert len(test_frame['Duty Id'].unique()) == len(get_sample_dataset()['duties'])
+
+        first_id = test_frame.query("`Duty Id` == 1")
+        assert len(first_id) == 1
+        assert first_id['Duty Id'].values == 1
+        assert first_id['Start Time'].values == "03:25"
+        assert first_id['End Time'].values == "11:39"
+
+        last_id = test_frame.query("`Duty Id` == 144")
+        assert len(last_id) == 1
+        assert last_id['Duty Id'].values == 144
+        assert last_id['Start Time'].values == "12:00"
+        assert last_id['End Time'].values == "21:04"
+
         
