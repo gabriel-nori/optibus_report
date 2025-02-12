@@ -18,6 +18,13 @@ class Vehicle():
 
         # Concatenate all vehicle event DataFrames into a single DataFrame
         self.__df = pd.concat(all_vehicle_events, ignore_index=True)
+        self.__df['duty_id']=self.__df['duty_id'].astype('Int64')
+        self.__df['vehicle_id']=self.__df['vehicle_id'].astype('Int64')
+        self.__df['vehicle_event_sequence']=self.__df['vehicle_event_sequence'].astype('Int64')
+        self.__df['trip_id']=self.__df['trip_id'].astype('Int64')
+        # self.__df.duty_id.astype('Int64')
+        # self.__df.vehicle_id.astype('Int64')
+        # self.__df.vehicle_event_sequence.astype('Int64')
     
 
     def get(self)-> pd.DataFrame:

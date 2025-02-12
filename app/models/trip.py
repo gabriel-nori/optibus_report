@@ -10,6 +10,7 @@ class Trip():
         """
         self.__df = pd.DataFrame(pd.json_normalize(data))
         self.__df.set_index('trip_id', inplace=False)
+        self.__df['trip_id']=self.__df['trip_id'].astype('Int64')
     
 
     def get(self)-> pd.DataFrame:

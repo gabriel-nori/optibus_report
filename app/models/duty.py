@@ -18,7 +18,9 @@ class Duty():
 
         # Concatenate all duties event DataFrames into a single DataFrame
         self.__df = pd.concat(all_duty_events, ignore_index=True)
-    
+        self.__df['duty_id']=self.__df['duty_id'].astype('Int64')
+        self.__df['vehicle_id']=self.__df['vehicle_id'].astype('Int64')
+        self.__df['vehicle_event_sequence']=self.__df['vehicle_event_sequence'].astype('Int64')
 
     def get(self)-> pd.DataFrame:
         return self.__df
@@ -30,3 +32,7 @@ class Duty():
 
     def filter(self, key, value):
         return self.__df[self.__df[key] == value]
+    
+
+    def query(self, query)-> pd.DataFrame:
+        return self.__df.query(query)
