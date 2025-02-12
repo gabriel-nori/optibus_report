@@ -112,7 +112,7 @@ class Processor():
         self.__vehicles.load(self.__data['vehicles'])
         self.__duties.load(self.__data['duties'])
 
-        self.obt()
+        self.__generate_obt()
 
         self.__data_loaded = True
     
@@ -130,7 +130,7 @@ class Processor():
             return None
 
     
-    def obt(self):
+    def __generate_obt(self):
         obt = pd.merge(
             self.__duties.get(),
             self.__vehicles.get(),
