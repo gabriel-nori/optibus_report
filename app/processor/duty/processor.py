@@ -12,13 +12,14 @@ class Processor():
     The class instantiate each model and then analyze each one,
     to create the report
     """
+    __data: json = None
     __stops: Stop = Stop()
     __trips: Trip = Trip()
     __vehicles: Vehicle = Vehicle()
     __duties: Duty = Duty()
     __sub_trips = None
     __data_loaded: bool = False
-    __filenames: list[str] = []
+    __filename: str = None
     __base_load_path: str = settings.FILE_INGESTION_PATH
     __base_save_path: str = settings.FILE_OUTPUT_PATH
     __operations: list[str] = []
@@ -61,46 +62,72 @@ class Processor():
     }
 
 
-    def __init__(self, filenames: list[str] = None, auto_operations: list[str] = None):
-        if not filenames:
-            for filename in os.listdir(settings.FILE_INGESTION_PATH):
-                # Check if the file ends with '.json'
-                if filename.endswith('.json'):
-                    print(os.path.join(filename))
-                    self.__filenames.append(filename)
+    def __init__(
+            self,
+            filename: str = None,
+            auto_operations: list[str] = None,
+            data: json = None
+        ):
+        if data:
+            self.__data = data
         else:
-            self.__filenames = filenames
+            if not filename:
+                raise Exception("No file provided")
+            self.__filename = filename
         
         if auto_operations:
             self.__operations = auto_operations
 
+        self.load_dfs()
+
+
+    def is_loaded(self)-> bool:
+        return self.__data_loaded
+
+
+    def get_obt(self)-> pd.DataFrame:
+        return self.__obt
 
     def start(self):
         """
         This is the start of the processing. In here we need to setup configs and create data models.
         Each of these functionalities must have its own method or classes
         """
-        filename = "mini_json_dataset.json" # This is a placeholder just to test
-
-        # Load all the dataframes using the provided JSON
-        self.load_dfs(self.__filenames[0])
+        # Load the dataframe using the provided JSON
+        self.load_dfs()
         self.duty_start_end()
         
     
-    def load_dfs(self, filename: str):
-        path = self.__base_load_path + filename
-        with open(path) as file:
-            data = json.load(file)
-            self.__stops.load(data['stops'])
-            self.__trips.load(data['trips'])
-            self.__vehicles.load(data['vehicles'])
-            self.__duties.load(data['duties'])
+    def load_dfs(self):
+        if self.__data_loaded:
+            return
+        
+        if self.__data is None:
+            path = self.__base_load_path + self.__filename
+            with open(path) as file:
+                self.__data = json.load(file)
+
+        self.__stops.load(self.__data['stops'])
+        self.__trips.load(self.__data['trips'])
+        self.__vehicles.load(self.__data['vehicles'])
+        self.__duties.load(self.__data['duties'])
+
         self.obt()
+
+        self.__data_loaded = True
     
 
-    def export_file(self, data: pd.DataFrame, filename: str = None, file_type: str = "xlsx"):
+    def export_file(
+            self, data: pd.DataFrame,
+            filename: str,
+            file_type: str = "xlsx"
+        )-> str|None:
         file = f"{self.__base_save_path}{filename}.{file_type}"
-        data.to_excel(file, index=False, engine='openpyxl')
+        try:
+            data.to_excel(file, index=False, engine='openpyxl')
+            return file
+        except:
+            return None
 
     
     def obt(self):
