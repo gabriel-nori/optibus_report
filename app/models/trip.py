@@ -23,3 +23,7 @@ class Trip():
 
     def filter(self, key, value):
         return self.__df[self.__df[key] == value]
+    
+
+    def query(self, query)-> pd.DataFrame:
+        return self.__df.query(query)
