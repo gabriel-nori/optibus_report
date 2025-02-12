@@ -88,6 +88,7 @@ class Processor():
     def get_obt(self)-> pd.DataFrame:
         return self.__obt
 
+
     def start(self):
         """
         This is the start of the processing. In here we need to setup configs and create data models.
@@ -168,10 +169,11 @@ class Processor():
             end_type = end['duty_event_type'].values[0]
         end_time = end[self.__time_column_map[end_type]["end_time"]].values[0]
 
-        return [start_time, end_time]
+        return (start_time, end_time)
 
 
-    def duty_start_end(self):
+    def duty_start_end(self, filename: str = None, export: bool = True)-> pd.DataFrame:
+        filename = filename if filename else "start_and_end_time"
         start_times: list[str] = []
         end_times: list[str] = []
         duties: list[int] = []
@@ -191,4 +193,6 @@ class Processor():
         }
 
         df = pd.DataFrame(df_dict)
-        self.export_file(df, "start_and_end_time")
+        if export:
+            self.export_file(df, filename)
+        return df
