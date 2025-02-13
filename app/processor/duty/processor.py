@@ -34,30 +34,48 @@ class Processor():
         "depot_pull_in",
         "taxi"
     ]
-    __time_column_map: dict[dict[str]] = {
+    __column_map: dict[dict[str]] = {
         "pre_trip": {
             "start_time": "start_time_y",
-            "end_time": "end_time_y"
+            "end_time": "end_time_y",
+            "start_id": "origin_stop_id_y",
+            "end_id": "destination_stop_id_y"
         },
         "depot_pull_out": {
             "start_time": "start_time_y",
-            "end_time": "end_time_y"
+            "end_time": "end_time_y",
+            "start_id": "origin_stop_id_y",
+            "end_id": "destination_stop_id_y"
         },
         "service_trip": {
             "start_time": "departure_time",
-            "end_time": "arrival_time"
+            "end_time": "arrival_time",
+            "start_id": "origin_stop_id",
+            "end_id": "destination_stop_id"
         },
         "sign_on": {
             "start_time": "start_time_x",
-            "end_time": "end_time_x"
+            "end_time": "end_time_x",
+            "start_id": "origin_stop_id_x",
+            "end_id": "destination_stop_id_x"
         },
         "depot_pull_in": {
             "start_time": "start_time_y",
-            "end_time": "end_time_y"
+            "end_time": "end_time_y",
+            "start_id": "origin_stop_id_y",
+            "end_id": "destination_stop_id_y"
         },
         "taxi": {
             "start_time": "start_time_x",
-            "end_time": "end_time_x"
+            "end_time": "end_time_x",
+            "start_id": "origin_stop_id_x",
+            "end_id": "destination_stop_id_x"
+        },
+        "dead_head": {
+            "start_time": "start_time_y",
+            "end_time": "end_time_y",
+            "start_id": "origin_stop_id_y",
+            "end_id": "destination_stop_id_y"
         },
     }
 
@@ -97,6 +115,7 @@ class Processor():
         # Load the dataframe using the provided JSON
         self.load_dfs()
         self.duty_start_end()
+        self.duty_start_end_name()
         
     
     def load_dfs(self):
@@ -147,41 +166,67 @@ class Processor():
         self.__obt = obt
     
 
+    def __get_event_type(self, df: pd.DataFrame) -> str:
+        """Determine the type of event based on DataFrame content."""
+        if df['duty_event_type'].values[0] == 'vehicle_event':
+            return df['vehicle_event_type'].values[0]
+        return df['duty_event_type'].values[0]
+    
+
     def __get_start_end(self, df: pd.DataFrame)-> tuple[str, str]:
+        """
+        This method returns a tuple of tuple containing time and location.
+        The following example is a valid return:
+        (('0.03:25', 'Pomona'), ('0.11:39', 'Pomona'))
+        The tuple structure is as follows:
+        ((start_time, start_stop_id), (end_time, end_stop_id))
+        """
         # Get the first and last entries for the duty
         start = df.head(1)
         end = df.tail(1)
-        start_type = "pre_trip"
-        end_type = "depot_pull_in"
+        start_type = self.__get_event_type(start)
+        end_type = self.__get_event_type(end)
 
         # First, verify if it is vehicle, taxi or sign_on event
         # If it is vehicle, verify waht type and get data
 
-        if start['duty_event_type'].values[0] == 'vehicle_event':
-            start_type = start['vehicle_event_type'].values[0]
-        else:
-            start_type = start['duty_event_type'].values[0]
-        start_time = start[self.__time_column_map[start_type]["start_time"]].values[0]
+        start_data = start[[
+            self.__column_map[start_type]["start_time"],
+            self.__column_map[start_type]["start_id"],
+        ]].values[0]
+        
+        end_data = end[[
+            self.__column_map[end_type]["end_time"],
+            self.__column_map[end_type]["end_id"]
+        ]].values[0]
 
-        if end['duty_event_type'].values[0] == 'vehicle_event':
-            start_type = end['vehicle_event_type'].values[0]
-        else:
-            end_type = end['duty_event_type'].values[0]
-        end_time = end[self.__time_column_map[end_type]["end_time"]].values[0]
-
-        return (start_time, end_time)
+        return (tuple(start_data), tuple(end_data))
 
 
-    def duty_start_end(self, filename: str = None, export: bool = True)-> pd.DataFrame:
+    def duty_start_end(
+            self,
+            list_locations: bool = False,
+            filename: str = None,
+            export: bool = True
+        )-> pd.DataFrame:
         filename = filename if filename else "start_and_end_time"
         start_times: list[str] = []
         end_times: list[str] = []
         duties: list[int] = []
+        start_ids: list[str] = []
+        end_ids: list[str] = []
+
         for duty_id in self.__obt['duty_id'].unique():
             df = self.__obt.query(f"duty_id == {duty_id}")
-            start_time, end_time = self.__get_start_end(df)
-            start_time = start_time.split(".")[1]
-            end_time = end_time.split(".")[1]
+
+            start, end = self.__get_start_end(df)
+            start_time = start[0].split(".")[1]
+            end_time = end[0].split(".")[1]
+
+            if list_locations:
+                start_ids.append(start[1])
+                end_ids.append(end[1])
+
             start_times.append(start_time)
             end_times.append(end_time)
             duties.append(duty_id)
@@ -191,8 +236,48 @@ class Processor():
             "Start Time": start_times,
             "End Time": end_times
         }
+        
+        if list_locations:
+            df_dict["start_stop_id"] = start_ids
+            df_dict["end_stop_id"] = end_ids
 
         df = pd.DataFrame(df_dict)
         if export:
             self.export_file(df, filename)
         return df
+
+
+    def duty_start_end_name(self, filename: str = None, export: bool = True)-> pd.DataFrame:
+        filename = filename if filename else "start_and_end_time_name"
+        df = self.duty_start_end(list_locations=True, export=False)
+        df = pd.merge(
+            df,
+            self.__stops.get(),
+            left_on=['start_stop_id'],
+            right_on=['stop_id'],
+            how='inner'
+        )
+        df = pd.merge(
+            df,
+            self.__stops.get(),
+            left_on=['end_stop_id'],
+            right_on=['stop_id'],
+            how='inner'
+        )
+
+        df = df[[
+            'Duty Id',
+            'Start Time',
+            'End Time',
+            'stop_name_x',
+            'stop_name_y',
+        ]].rename(
+            columns={
+                'stop_name_x': 'Start stop description',
+                'stop_name_y': 'End stop description',
+            }
+        )
+        if export:
+            self.export_file(df, filename)
+        return df
+

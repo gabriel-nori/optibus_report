@@ -24,11 +24,11 @@ class TestProcessor(TestCase):
     def test_get_start_end(self):
         p = Processor(data = get_sample_dataset())
 
-        assert ("0.03:25", "0.11:39") == p._Processor__get_start_end(
+        assert (('0.03:25', 'Pomona'), ('0.11:39', 'Pomona')) == p._Processor__get_start_end(
             self.__processor.get_obt().query(f"duty_id == 1")
         )
 
-        assert ("0.04:00", "0.12:32") == p._Processor__get_start_end(
+        assert (('0.04:00', 'Pomona'), ('0.12:32', 'Pomona')) == p._Processor__get_start_end(
             self.__processor.get_obt().query(f"duty_id == 5")
         )
     
@@ -56,5 +56,40 @@ class TestProcessor(TestCase):
         assert last_id['Duty Id'].values == 144
         assert last_id['Start Time'].values == "12:00"
         assert last_id['End Time'].values == "21:04"
+    
 
+    def test_duty_start_end_name(self):
+        filename = f"test_duty_start_end_name_{time.time()}"
+        assert f"{filename}.xlsx" not in os.listdir(settings.FILE_OUTPUT_PATH)
+        assert isinstance(self.__processor.duty_start_end_name(export=False), pd.DataFrame)
+        assert f"{filename}.xlsx" not in os.listdir(settings.FILE_OUTPUT_PATH)
+        test_frame = self.__processor.duty_start_end_name(filename=filename, export=True)
+        assert isinstance(test_frame, pd.DataFrame)
+        assert f"{filename}.xlsx" in os.listdir(settings.FILE_OUTPUT_PATH)
+        os.remove(f"{settings.FILE_OUTPUT_PATH}{filename}.xlsx")
         
+        assert len(test_frame['Duty Id'].unique()) == len(get_sample_dataset()['duties'])
+
+        first_id = test_frame.query("`Duty Id` == 1")
+        assert len(first_id) == 1
+        assert first_id['Duty Id'].values == 1
+        assert first_id['Start Time'].values == "03:25"
+        assert first_id['End Time'].values == "11:39"
+        assert first_id['Start stop description'].values == "Pomona Yard"
+        assert first_id['End stop description'].values == "Pomona Yard"
+
+        midddle = test_frame.query("`Duty Id` == 100")
+        assert len(midddle) == 1
+        assert midddle['Duty Id'].values == 100
+        assert midddle['Start Time'].values == "12:03"
+        assert midddle['End Time'].values == "21:49"
+        assert midddle['Start stop description'].values == "Pomona Yard"
+        assert midddle['End stop description'].values == "Pomona Yard"
+
+        last_id = test_frame.query("`Duty Id` == 144")
+        assert len(last_id) == 1
+        assert last_id['Duty Id'].values == 144
+        assert last_id['Start Time'].values == "12:00"
+        assert last_id['End Time'].values == "21:04"
+        assert last_id['Start stop description'].values == "Pomona Yard"
+        assert last_id['End stop description'].values == "Pomona Yard"
