@@ -121,9 +121,22 @@ class Processor():
         """
         # Load the dataframe using the provided JSON
         self.load_dfs()
-        # self.duty_start_end()
-        # self.duty_start_end_name()
-        self.duty_breaks()
+        if 'a' in self.__operations:
+            print("Executing all operations")
+            self.duty_start_end()
+            self.duty_start_end_name()
+            self.duty_breaks()
+        else:
+            if 's' in self.__operations:
+                print("Executing duty start and end operation")
+                self.duty_start_end()
+            if 'n' in self.__operations:
+                print("Executing duty start and end, with names, operation")
+                self.duty_start_end_name()
+            if 'b' in self.__operations:
+                print("Executing duty breaks operation")
+                self.duty_breaks()
+        
         
     
     def load_dfs(self):
@@ -132,8 +145,11 @@ class Processor():
         
         if self.__data is None:
             path = self.__base_load_path + self.__filename
-            with open(path) as file:
-                self.__data = json.load(file)
+            try:
+                with open(path) as file:
+                    self.__data = json.load(file)
+            except:
+                raise Exception("The file provided is not valid")
 
         self.__stops.load(self.__data['stops'])
         self.__trips.load(self.__data['trips'])
