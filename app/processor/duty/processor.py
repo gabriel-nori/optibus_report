@@ -364,7 +364,7 @@ class Processor():
                         "End Time": [duty_id_data['End Time'].values[0]],
                         "Start stop description": [duty_id_data['Start stop description'].values[0]],
                         "End stop description": [duty_id_data['End stop description'].values[0]],
-                        "Break start time": [str(previous_row_end.time())],
+                        "Break start time": [previous_row_end.strftime("%H:%M")],
                         "Break duration": [time_difference_minutes],
                         "Break stop name": [self.__stops.query(
                             f"stop_id == '{
