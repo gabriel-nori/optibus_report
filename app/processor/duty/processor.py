@@ -150,11 +150,24 @@ class Processor():
                     self.__data = json.load(file)
             except:
                 raise Exception("The file provided is not valid")
+        
 
-        self.__stops.load(self.__data['stops'])
-        self.__trips.load(self.__data['trips'])
-        self.__vehicles.load(self.__data['vehicles'])
-        self.__duties.load(self.__data['duties'])
+        try:
+            self.__stops.load(self.__data['stops'])
+        except:
+            raise Exception("Failed to load stops model")
+        try:
+            self.__trips.load(self.__data['trips'])
+        except:
+            raise Exception("Failed to load trips model")
+        try:
+            self.__vehicles.load(self.__data['vehicles'])
+        except:
+            raise Exception("Failed to load vehicles model")
+        try:
+            self.__duties.load(self.__data['duties'])
+        except:
+            raise Exception("Failed to load duties model")
 
         self.__generate_obt()
 
