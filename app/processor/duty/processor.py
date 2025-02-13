@@ -1,4 +1,5 @@
 from app.models import Duty, Stop, Trip, Vehicle
+from datetime import datetime
 from app import settings
 import pandas as pd
 import json
@@ -71,7 +72,13 @@ class Processor():
             "start_id": "origin_stop_id_x",
             "end_id": "destination_stop_id_x"
         },
-        "dead_head": {
+        "deadhead": {
+            "start_time": "start_time_y",
+            "end_time": "end_time_y",
+            "start_id": "origin_stop_id_y",
+            "end_id": "destination_stop_id_y"
+        },
+        "attendance": {
             "start_time": "start_time_y",
             "end_time": "end_time_y",
             "start_id": "origin_stop_id_y",
@@ -114,8 +121,9 @@ class Processor():
         """
         # Load the dataframe using the provided JSON
         self.load_dfs()
-        self.duty_start_end()
-        self.duty_start_end_name()
+        # self.duty_start_end()
+        # self.duty_start_end_name()
+        self.duty_breaks()
         
     
     def load_dfs(self):
@@ -248,6 +256,9 @@ class Processor():
 
 
     def duty_start_end_name(self, filename: str = None, export: bool = True)-> pd.DataFrame:
+        """
+        This method is complimentary to the 'duty_start_end', including th time and locations
+        """
         filename = filename if filename else "start_and_end_time_name"
         df = self.duty_start_end(list_locations=True, export=False)
         df = pd.merge(
@@ -281,3 +292,70 @@ class Processor():
             self.export_file(df, filename)
         return df
 
+
+    def duty_breaks(
+            self,
+            break_duration: int = 15,
+            filename: str = None,
+            export: bool = True
+        )-> pd.DataFrame:
+        """
+        This method returns all the breaks an employee had during a duty.
+        By default, breaks longer than 15 minutes are included, but this can be changed
+        using the 'break_duration' parameter.
+        To calculate a break, we need to go through each line checking the difference betwen
+        ending a trip/service and starting another.
+        If this interval is > 'break_duration', include to the final dataset.
+        """
+        filename = filename if filename else "duty_breaks"
+        report_data = []
+        duty_data = self.duty_start_end_name(export=False)
+        for duty_id in duty_data['Duty Id'].unique():
+            df = self.__obt.query(f"duty_id == {duty_id}")
+            duty_id_data = duty_data.query(f"`Duty Id` == {duty_id}")
+            rows = []
+            previous_row = None
+            # Iterate over the dataframe to check for breaks and durations
+            for index, row in df.iterrows():
+                if previous_row is None:
+                    previous_row = row.to_frame().T
+                    continue
+
+                previous_row_end = datetime.strptime(self.__get_property(previous_row, "end_time", "time"), '%H:%M')
+                
+                current_row = row.to_frame().T
+                current_row_start = datetime.strptime(self.__get_property(current_row, "start_time", "time"), '%H:%M')
+
+                time_difference_minutes = int((current_row_start - previous_row_end).total_seconds()/60)
+                
+                if time_difference_minutes > break_duration:
+                    break_info = {
+                        "Duty Id": [previous_row['duty_id'].values[0]],
+                        "Start Time": [duty_id_data['Start Time'].values[0]],
+                        "End Time": [duty_id_data['End Time'].values[0]],
+                        "Start stop description": [duty_id_data['Start stop description'].values[0]],
+                        "End stop description": [duty_id_data['End stop description'].values[0]],
+                        "Break start time": [str(previous_row_end.time())],
+                        "Break duration": [time_difference_minutes],
+                        "Break stop name": [self.__stops.query(
+                            f"stop_id == '{
+                                self.__get_property(previous_row, 'end_id')
+                            }'"
+                        )['stop_name'].values[0]]
+                    }
+                    report_data.append(pd.DataFrame(break_info))
+                previous_row = current_row
+        report = pd.concat(report_data)
+        if export:
+            self.export_file(report, filename)
+        return report
+    
+    def __get_property(self, frame: pd.DataFrame, key: str, type:str = "string"):
+        value = frame[
+            self.__column_map[self.__get_event_type(frame)][key]
+        ].values[0]
+
+        if type == "time":
+            value = value.split(".")[1]
+        
+        return value

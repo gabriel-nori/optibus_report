@@ -93,3 +93,51 @@ class TestProcessor(TestCase):
         assert last_id['End Time'].values == "21:04"
         assert last_id['Start stop description'].values == "Pomona Yard"
         assert last_id['End stop description'].values == "Pomona Yard"
+    
+
+    def test_duty_break(self):
+        filename = f"test_duty_break_{time.time()}"
+        assert f"{filename}.xlsx" not in os.listdir(settings.FILE_OUTPUT_PATH)
+        assert isinstance(self.__processor.duty_breaks(export=False), pd.DataFrame)
+        assert f"{filename}.xlsx" not in os.listdir(settings.FILE_OUTPUT_PATH)
+        test_frame = self.__processor.duty_breaks(filename=filename, export=True)
+        assert isinstance(test_frame, pd.DataFrame)
+        assert f"{filename}.xlsx" in os.listdir(settings.FILE_OUTPUT_PATH)
+        os.remove(f"{settings.FILE_OUTPUT_PATH}{filename}.xlsx")
+
+        first_id = test_frame.query("`Duty Id` == 1")
+        assert len(first_id) == 3
+
+        midddle = test_frame.query("`Duty Id` == 100")
+        assert len(midddle) == 3
+
+        last_id = test_frame.query("`Duty Id` == 139")
+        assert len(last_id) == 2
+    
+
+    def test_get_property(self):
+        p = Processor(data = get_sample_dataset())
+        assert '0.03:25' == p._Processor__get_property(
+            self.__processor.get_obt().query(f"duty_id == 1"),
+            "start_time"
+        )
+
+        assert '0.04:00' == p._Processor__get_property(
+            self.__processor.get_obt().query(f"duty_id == 5"),
+            "start_time"
+        )
+
+        assert '0.04:20' == p._Processor__get_property(
+            self.__processor.get_obt().query(f"duty_id == 5"),
+            "end_time"
+        )
+
+        assert 'Pomona' == p._Processor__get_property(
+            self.__processor.get_obt().query(f"duty_id == 5"),
+            "end_id"
+        )
+
+        assert 'Pomona' == p._Processor__get_property(
+            self.__processor.get_obt().query(f"duty_id == 5"),
+            "start_id"
+        )
